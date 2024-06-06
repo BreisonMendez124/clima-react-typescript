@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { SearchType } from '../types';
 import { string , object , number , InferInput , parse } from 'valibot'
+import { useMemo, useState } from 'react';
 // import { z } from 'zod'
 
 // Zod
@@ -24,12 +25,23 @@ const WeatherSchema = object({
         temp_min: number()
     })
 })
-type Weather = InferInput< typeof WeatherSchema >
+export type Weather = InferInput< typeof WeatherSchema >
 
+const initialState = { 
+    name: '',
+    main: { 
+        temp: 0,
+        temp_max: 0,
+        temp_min: 0
+    }
+}
 export default function useWeather(){
-    
+    const [ weather , setWeather ] = useState<Weather>(initialState)
+    const [ loading , setLoading ] = useState( false )
     const fetchWeather = async( search: SearchType ) => { 
         const appId = import.meta.env.VITE_API_KEY;
+        setLoading( true )
+        setWeather( initialState )
         try {
             const geoUrl = `http://api.openweathermap.org/geo/1.0/direct?q=${search.city},${ search.country}&appid=${appId}`;
             console.log('Consultando....')
@@ -48,15 +60,22 @@ export default function useWeather(){
             const result = parse( WeatherSchema,  weatherResult );
             console.log( result )
             if( result ){
-                console.log( result.name )
+                setWeather( result )
             }
 
             
         } catch (error) {
             console.log( error )
+        } finally { 
+            setLoading( false )
         }
     }
+
+    const hasDataWeather = useMemo( ( ) =>  weather.name , [ weather ])
     return { 
-        fetchWeather
+        weather,
+        fetchWeather,
+        hasDataWeather,
+        loading
     }
 }
